@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Balance Pick Summary</title>
+</head>
+<body>
+
+<h2>Select Concept</h2>
+
+<select id="concept"></select>
+
+<table border="1" id="table"></table>
+
+<script>
+fetch('Balance_Pick_Summary.csv')
+.then(res => res.text())
+.then(data => {
+
+let rows = data.split('\n').map(r=>r.split(','));
+
+let header = rows[0];
+
+let conceptIndex = header.indexOf('DIVISION');
+
+let concepts = [...new Set(rows.slice(1).map(r=>r[conceptIndex]))];
+
+let dropdown = document.getElementById("concept");
+
+concepts.forEach(c=>{
+let opt=document.createElement("option");
+opt.text=c;
+dropdown.add(opt);
+});
+
+dropdown.onchange = function(){
+
+let selected=this.value;
+
+let table=document.getElementById("table");
+
+table.innerHTML="";
+
+rows.forEach(r=>{
+if(r[conceptIndex]==selected || r==header){
+
+let tr=document.createElement("tr");
+
+r.forEach(c=>{
+let td=document.createElement("td");
+td.innerText=c;
+tr.appendChild(td);
+});
+
+table.appendChild(tr);
+
+}
+});
+
+};
+
+});
+</script>
+
+</body>
+</html>
