@@ -26,7 +26,7 @@ h2 {
     margin-bottom: 15px;
 }
 
-select {
+select, input {
     padding: 6px;
     font-size: 14px;
     min-width: 140px;
@@ -89,12 +89,12 @@ Concept<br>
 
 <div>
 Zone<br>
-<select id="zoneSelect" multiple size="6"></select>
+<select id="zoneSelect"></select>
 </div>
 
 <div>
-DEST_ID<br>
-<select id="destSelect" multiple size="6"></select>
+DEST_ID Search<br>
+<input type="text" id="destSearch" placeholder="Type DEST_ID">
 </div>
 
 </div>
@@ -107,7 +107,6 @@ let workbook;
 let currentData;
 
 
-/* Load Excel */
 fetch("Balance_Pick_Summary.xlsx")
 .then(response => response.arrayBuffer())
 .then(data => {
@@ -132,7 +131,6 @@ fetch("Balance_Pick_Summary.xlsx")
 });
 
 
-/* Concept change */
 document.getElementById("sheetSelect").addEventListener("change", function() {
 
     loadSheet(this.value);
@@ -140,16 +138,12 @@ document.getElementById("sheetSelect").addEventListener("change", function() {
 });
 
 
-/* Zone change */
 document.getElementById("zoneSelect").addEventListener("change", renderTable);
 
-
-/* DEST change */
-document.getElementById("destSelect").addEventListener("change", renderTable);
+document.getElementById("destSearch").addEventListener("input", renderTable);
 
 
 
-/* Load sheet */
 function loadSheet(sheetName) {
 
     let sheet = workbook.Sheets[sheetName];
@@ -158,14 +152,12 @@ function loadSheet(sheetName) {
 
     populateZoneDropdown();
 
-    populateDestDropdown();
-
     renderTable();
+
 }
 
 
 
-/* Populate Zones */
 function populateZoneDropdown() {
 
     let zoneDropdown = document.getElementById("zoneSelect");
@@ -180,7 +172,6 @@ function populateZoneDropdown() {
 
             option.value = index;
             option.text = header;
-            option.selected = true;
 
             zoneDropdown.appendChild(option);
 
@@ -192,63 +183,26 @@ function populateZoneDropdown() {
 
 
 
-/* Populate DEST_ID */
-function populateDestDropdown() {
-
-    let destDropdown = document.getElementById("destSelect");
-
-    destDropdown.innerHTML = "";
-
-    let destSet = new Set();
-
-    for(let i=1; i<currentData.length; i++) {
-
-        let dest = currentData[i][1];
-
-        if(dest && dest !== "")
-            destSet.add(dest);
-
-    }
-
-    Array.from(destSet).sort().forEach(dest => {
-
-        let option = document.createElement("option");
-
-        option.value = dest;
-        option.text = dest;
-        option.selected = true;
-
-        destDropdown.appendChild(option);
-
-    });
-
-}
-
-
-
-/* Render table */
 function renderTable() {
 
-    let zoneIndexes =
-        Array.from(document.getElementById("zoneSelect").selectedOptions)
-        .map(o => parseInt(o.value));
+    let zoneIndex =
+        parseInt(document.getElementById("zoneSelect").value);
 
-    let selectedDest =
-        Array.from(document.getElementById("destSelect").selectedOptions)
-        .map(o => o.value);
+    let searchText =
+        document.getElementById("destSearch").value.toLowerCase();
+
+    if(isNaN(zoneIndex))
+        return;
 
     let html = "<table>";
 
     html += "<tr>";
 
     html += "<th>" + currentData[0][0] + "</th>";
+
     html += "<th>" + currentData[0][1] + "</th>";
 
-    zoneIndexes.forEach(i => {
-
-        html += "<th>" + currentData[0][i] + "</th>";
-
-    });
+    html += "<th>" + currentData[0][zoneIndex] + "</th>";
 
     html += "<th>Total</th>";
 
@@ -256,28 +210,30 @@ function renderTable() {
 
 
 
-    for(let i=1; i<currentData.length; i++) {
+    for(let i=1;i<currentData.length;i++) {
 
         let row = currentData[i];
 
         let isTotal = row[0] === "Total";
 
-        if(!isTotal && !selectedDest.includes(String(row[1])))
-            continue;
+        if(!isTotal) {
 
-        html += "<tr class='" + (isTotal ? "total-row" : "") + "'>";
+            let dest = String(row[1]).toLowerCase();
 
-        html += "<td>" + (row[0] || "") + "</td>";
+            if(searchText && !dest.includes(searchText))
+                continue;
 
-        html += "<td>" + (row[1] || "") + "</td>";
+        }
 
-        zoneIndexes.forEach(zone => {
+        html += "<tr class='"+(isTotal?"total-row":"")+"'>";
 
-            html += "<td>" + (row[zone] || "") + "</td>";
+        html += "<td>"+(row[0]||"")+"</td>";
 
-        });
+        html += "<td>"+(row[1]||"")+"</td>";
 
-        html += "<td>" + (row[row.length-1] || "") + "</td>";
+        html += "<td>"+(row[zoneIndex]||"")+"</td>";
+
+        html += "<td>"+(row[row.length-1]||"")+"</td>";
 
         html += "</tr>";
 
