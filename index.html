@@ -1,17 +1,77 @@
 <!DOCTYPE html>
 <html>
+
 <head>
+
 <meta charset="UTF-8">
 <title>Balance Pick Summary</title>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
-body { font-family: Arial; margin: 20px; }
-select { padding: 8px; font-size: 16px; }
-table { border-collapse: collapse; margin-top: 15px; }
-td, th { border: 1px solid #ccc; padding: 6px 10px; }
-th { background-color: #4472C4; color: white; }
+
+body {
+    font-family: Segoe UI, Arial;
+    margin: 25px;
+    background-color: #F8F9FB;
+}
+
+h2 {
+    color: #2F5597;
+}
+
+.control-panel {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 15px;
+}
+
+select {
+    padding: 6px;
+    font-size: 14px;
+    min-width: 140px;
+}
+
+table {
+    border-collapse: collapse;
+    font-size: 13px;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.08);
+}
+
+th {
+    background-color: #4472C4;
+    color: white;
+    font-weight: bold;
+    padding: 8px 14px;
+    border: 1px solid #C5D1E0;
+}
+
+td {
+    padding: 7px 14px;
+    border: 1px solid #E0E0E0;
+    text-align: center;
+}
+
+td:first-child,
+td:nth-child(2) {
+    font-weight: bold;
+    background-color: #F2F2F2;
+}
+
+tr:nth-child(even):not(.total-row) {
+    background-color: #FAFAFA;
+}
+
+.total-row {
+    background-color: #D9E1F2 !important;
+    font-weight: bold;
+}
+
+tr:hover:not(.total-row) {
+    background-color: #E7F1FF;
+}
+
 </style>
 
 </head>
@@ -20,49 +80,210 @@ th { background-color: #4472C4; color: white; }
 
 <h2>Balance Pick Summary</h2>
 
-<label>Select Concept:</label>
+<div class="control-panel">
+
+<div>
+Concept<br>
 <select id="sheetSelect"></select>
+</div>
+
+<div>
+Zone<br>
+<select id="zoneSelect" multiple size="6"></select>
+</div>
+
+<div>
+DEST_ID<br>
+<select id="destSelect" multiple size="6"></select>
+</div>
+
+</div>
 
 <div id="tableContainer"></div>
 
 <script>
 
 let workbook;
+let currentData;
 
+
+/* Load Excel */
 fetch("Balance_Pick_Summary.xlsx")
 .then(response => response.arrayBuffer())
 .then(data => {
 
     workbook = XLSX.read(data, { type: "array" });
 
-    let sheetNames = workbook.SheetNames;
+    let sheetDropdown = document.getElementById("sheetSelect");
 
-    let dropdown = document.getElementById("sheetSelect");
-
-    sheetNames.forEach(name => {
+    workbook.SheetNames.forEach(name => {
 
         let option = document.createElement("option");
+
         option.value = name;
         option.text = name;
-        dropdown.appendChild(option);
+
+        sheetDropdown.appendChild(option);
 
     });
 
-    showSheet(sheetNames[0]);
+    loadSheet(workbook.SheetNames[0]);
 
 });
 
+
+/* Concept change */
 document.getElementById("sheetSelect").addEventListener("change", function() {
 
-    showSheet(this.value);
+    loadSheet(this.value);
 
 });
 
-function showSheet(sheetName) {
+
+/* Zone change */
+document.getElementById("zoneSelect").addEventListener("change", renderTable);
+
+
+/* DEST change */
+document.getElementById("destSelect").addEventListener("change", renderTable);
+
+
+
+/* Load sheet */
+function loadSheet(sheetName) {
 
     let sheet = workbook.Sheets[sheetName];
 
-    let html = XLSX.utils.sheet_to_html(sheet);
+    currentData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+    populateZoneDropdown();
+
+    populateDestDropdown();
+
+    renderTable();
+}
+
+
+
+/* Populate Zones */
+function populateZoneDropdown() {
+
+    let zoneDropdown = document.getElementById("zoneSelect");
+
+    zoneDropdown.innerHTML = "";
+
+    currentData[0].forEach((header, index) => {
+
+        if(index >= 2 && header !== "Total") {
+
+            let option = document.createElement("option");
+
+            option.value = index;
+            option.text = header;
+            option.selected = true;
+
+            zoneDropdown.appendChild(option);
+
+        }
+
+    });
+
+}
+
+
+
+/* Populate DEST_ID */
+function populateDestDropdown() {
+
+    let destDropdown = document.getElementById("destSelect");
+
+    destDropdown.innerHTML = "";
+
+    let destSet = new Set();
+
+    for(let i=1; i<currentData.length; i++) {
+
+        let dest = currentData[i][1];
+
+        if(dest && dest !== "")
+            destSet.add(dest);
+
+    }
+
+    Array.from(destSet).sort().forEach(dest => {
+
+        let option = document.createElement("option");
+
+        option.value = dest;
+        option.text = dest;
+        option.selected = true;
+
+        destDropdown.appendChild(option);
+
+    });
+
+}
+
+
+
+/* Render table */
+function renderTable() {
+
+    let zoneIndexes =
+        Array.from(document.getElementById("zoneSelect").selectedOptions)
+        .map(o => parseInt(o.value));
+
+    let selectedDest =
+        Array.from(document.getElementById("destSelect").selectedOptions)
+        .map(o => o.value);
+
+    let html = "<table>";
+
+    html += "<tr>";
+
+    html += "<th>" + currentData[0][0] + "</th>";
+    html += "<th>" + currentData[0][1] + "</th>";
+
+    zoneIndexes.forEach(i => {
+
+        html += "<th>" + currentData[0][i] + "</th>";
+
+    });
+
+    html += "<th>Total</th>";
+
+    html += "</tr>";
+
+
+
+    for(let i=1; i<currentData.length; i++) {
+
+        let row = currentData[i];
+
+        let isTotal = row[0] === "Total";
+
+        if(!isTotal && !selectedDest.includes(String(row[1])))
+            continue;
+
+        html += "<tr class='" + (isTotal ? "total-row" : "") + "'>";
+
+        html += "<td>" + (row[0] || "") + "</td>";
+
+        html += "<td>" + (row[1] || "") + "</td>";
+
+        zoneIndexes.forEach(zone => {
+
+            html += "<td>" + (row[zone] || "") + "</td>";
+
+        });
+
+        html += "<td>" + (row[row.length-1] || "") + "</td>";
+
+        html += "</tr>";
+
+    }
+
+    html += "</table>";
 
     document.getElementById("tableContainer").innerHTML = html;
 
