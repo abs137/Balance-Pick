@@ -4,70 +4,83 @@
 <head>
 
 <meta charset="UTF-8">
+
 <title>Balance Pick Summary</title>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 
+/* Page */
 body {
     font-family: Segoe UI, Arial;
     margin: 25px;
-    background-color: #F8F9FB;
+    background-color: #F4F6FA;
 }
 
 h2 {
     color: #2F5597;
-}
-
-.control-panel {
-    display: flex;
-    gap: 30px;
     margin-bottom: 15px;
 }
 
-select, input {
-    padding: 6px;
-    font-size: 14px;
-    min-width: 140px;
+/* Controls */
+.control-panel {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 20px;
 }
 
+select, input {
+    padding: 6px 10px;
+    font-size: 14px;
+    min-width: 160px;
+}
+
+/* Table */
 table {
     border-collapse: collapse;
-    font-size: 13px;
     background-color: white;
+    font-size: 13px;
     box-shadow: 0 0 10px rgba(0,0,0,0.08);
 }
 
+/* Header */
 th {
     background-color: #4472C4;
     color: white;
     font-weight: bold;
     padding: 8px 14px;
     border: 1px solid #C5D1E0;
+    position: sticky;
+    top: 0;
 }
 
+/* Cells */
 td {
     padding: 7px 14px;
     border: 1px solid #E0E0E0;
     text-align: center;
 }
 
+/* First two columns bold */
 td:first-child,
 td:nth-child(2) {
     font-weight: bold;
     background-color: #F2F2F2;
 }
 
+/* Alternate row */
 tr:nth-child(even):not(.total-row) {
     background-color: #FAFAFA;
 }
 
+/* Total row */
 .total-row {
     background-color: #D9E1F2 !important;
     font-weight: bold;
 }
 
+/* Hover */
 tr:hover:not(.total-row) {
     background-color: #E7F1FF;
 }
@@ -94,7 +107,7 @@ Zone<br>
 
 <div>
 DEST_ID Search<br>
-<input type="text" id="destSearch" placeholder="Type DEST_ID">
+<input type="text" id="destSearch" placeholder="Enter DEST_ID">
 </div>
 
 </div>
@@ -107,6 +120,7 @@ let workbook;
 let currentData;
 
 
+/* Load Excel file */
 fetch("Balance_Pick_Summary.xlsx")
 .then(response => response.arrayBuffer())
 .then(data => {
@@ -131,6 +145,7 @@ fetch("Balance_Pick_Summary.xlsx")
 });
 
 
+/* Concept change */
 document.getElementById("sheetSelect").addEventListener("change", function() {
 
     loadSheet(this.value);
@@ -138,12 +153,16 @@ document.getElementById("sheetSelect").addEventListener("change", function() {
 });
 
 
+/* Zone change */
 document.getElementById("zoneSelect").addEventListener("change", renderTable);
 
+
+/* DEST_ID search */
 document.getElementById("destSearch").addEventListener("input", renderTable);
 
 
 
+/* Load selected Concept */
 function loadSheet(sheetName) {
 
     let sheet = workbook.Sheets[sheetName];
@@ -158,11 +177,21 @@ function loadSheet(sheetName) {
 
 
 
+/* Populate Zone dropdown */
 function populateZoneDropdown() {
 
     let zoneDropdown = document.getElementById("zoneSelect");
 
     zoneDropdown.innerHTML = "";
+
+    /* All Zones option */
+    let allOption = document.createElement("option");
+
+    allOption.value = "ALL";
+    allOption.text = "All Zones";
+    allOption.selected = true;
+
+    zoneDropdown.appendChild(allOption);
 
     currentData[0].forEach((header, index) => {
 
@@ -183,26 +212,47 @@ function populateZoneDropdown() {
 
 
 
+/* Render table */
 function renderTable() {
 
-    let zoneIndex =
-        parseInt(document.getElementById("zoneSelect").value);
+    let zoneValue = document.getElementById("zoneSelect").value;
 
     let searchText =
         document.getElementById("destSearch").value.toLowerCase();
 
-    if(isNaN(zoneIndex))
-        return;
+    let zoneIndexes = [];
+
+    if(zoneValue === "ALL") {
+
+        currentData[0].forEach((header, index) => {
+
+            if(index >= 2 && header !== "Total")
+                zoneIndexes.push(index);
+
+        });
+
+    }
+    else {
+
+        zoneIndexes.push(parseInt(zoneValue));
+
+    }
+
 
     let html = "<table>";
 
+    /* Header */
     html += "<tr>";
 
-    html += "<th>" + currentData[0][0] + "</th>";
+    html += "<th>"+currentData[0][0]+"</th>";
 
-    html += "<th>" + currentData[0][1] + "</th>";
+    html += "<th>"+currentData[0][1]+"</th>";
 
-    html += "<th>" + currentData[0][zoneIndex] + "</th>";
+    zoneIndexes.forEach(i => {
+
+        html += "<th>"+currentData[0][i]+"</th>";
+
+    });
 
     html += "<th>Total</th>";
 
@@ -210,7 +260,8 @@ function renderTable() {
 
 
 
-    for(let i=1;i<currentData.length;i++) {
+    /* Rows */
+    for(let i=1; i<currentData.length; i++) {
 
         let row = currentData[i];
 
@@ -231,7 +282,11 @@ function renderTable() {
 
         html += "<td>"+(row[1]||"")+"</td>";
 
-        html += "<td>"+(row[zoneIndex]||"")+"</td>";
+        zoneIndexes.forEach(index => {
+
+            html += "<td>"+(row[index]||"")+"</td>";
+
+        });
 
         html += "<td>"+(row[row.length-1]||"")+"</td>";
 
@@ -248,4 +303,5 @@ function renderTable() {
 </script>
 
 </body>
+
 </html>
