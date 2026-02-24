@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Balance Pick Summary</title>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+body { font-family: Arial; margin: 20px; }
+select { padding: 8px; font-size: 16px; }
+table { border-collapse: collapse; margin-top: 15px; }
+td, th { border: 1px solid #ccc; padding: 6px 10px; }
+th { background-color: #4472C4; color: white; }
+</style>
+
+</head>
+
+<body>
+
+<h2>Balance Pick Summary</h2>
+
+<label>Select Concept:</label>
+<select id="sheetSelect"></select>
+
+<div id="tableContainer"></div>
+
+<script>
+
+let workbook;
+
+fetch("Balance_Pick_Summary.xlsx")
+.then(response => response.arrayBuffer())
+.then(data => {
+
+    workbook = XLSX.read(data, { type: "array" });
+
+    let sheetNames = workbook.SheetNames;
+
+    let dropdown = document.getElementById("sheetSelect");
+
+    sheetNames.forEach(name => {
+
+        let option = document.createElement("option");
+        option.value = name;
+        option.text = name;
+        dropdown.appendChild(option);
+
+    });
+
+    showSheet(sheetNames[0]);
+
+});
+
+document.getElementById("sheetSelect").addEventListener("change", function() {
+
+    showSheet(this.value);
+
+});
+
+function showSheet(sheetName) {
+
+    let sheet = workbook.Sheets[sheetName];
+
+    let html = XLSX.utils.sheet_to_html(sheet);
+
+    document.getElementById("tableContainer").innerHTML = html;
+
+}
+
+</script>
+
+</body>
+</html>
