@@ -4,14 +4,12 @@
 <head>
 
 <meta charset="UTF-8">
-
 <title>Balance Pick Summary</title>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 
-/* Page */
 body {
     font-family: Segoe UI, Arial;
     margin: 25px;
@@ -20,10 +18,8 @@ body {
 
 h2 {
     color: #2F5597;
-    margin-bottom: 15px;
 }
 
-/* Controls */
 .control-panel {
     display: flex;
     gap: 30px;
@@ -36,7 +32,6 @@ select, input {
     min-width: 160px;
 }
 
-/* Table */
 table {
     border-collapse: collapse;
     background-color: white;
@@ -44,18 +39,14 @@ table {
     box-shadow: 0 0 10px rgba(0,0,0,0.08);
 }
 
-/* Header */
 th {
     background-color: #4472C4;
     color: white;
     font-weight: bold;
     padding: 8px 14px;
     border: 1px solid #C5D1E0;
-    position: sticky;
-    top: 0;
 }
 
-/* Cells */
 td {
     padding: 7px 14px;
     border: 1px solid #E0E0E0;
@@ -69,7 +60,7 @@ td:nth-child(2) {
     background-color: #F2F2F2;
 }
 
-/* Alternate row */
+/* Alternate rows */
 tr:nth-child(even):not(.total-row) {
     background-color: #FAFAFA;
 }
@@ -80,7 +71,7 @@ tr:nth-child(even):not(.total-row) {
     font-weight: bold;
 }
 
-/* Hover */
+/* Hover effect */
 tr:hover:not(.total-row) {
     background-color: #E7F1FF;
 }
@@ -120,14 +111,24 @@ let workbook;
 let currentData;
 
 
-/* Load Excel file */
-fetch("Balance_Pick_Summary.xlsx")
+/* Load Excel with cache bypass */
+fetch("Balance_Pick_Summary.xlsx?v=" + new Date().getTime())
 .then(response => response.arrayBuffer())
 .then(data => {
 
     workbook = XLSX.read(data, { type: "array" });
 
-    let sheetDropdown = document.getElementById("sheetSelect");
+    populateConceptDropdown();
+
+});
+
+
+/* Populate Concept dropdown */
+function populateConceptDropdown() {
+
+    let dropdown = document.getElementById("sheetSelect");
+
+    dropdown.innerHTML = "";
 
     workbook.SheetNames.forEach(name => {
 
@@ -136,17 +137,25 @@ fetch("Balance_Pick_Summary.xlsx")
         option.value = name;
         option.text = name;
 
-        sheetDropdown.appendChild(option);
+        dropdown.appendChild(option);
 
     });
 
-    loadSheet(workbook.SheetNames[0]);
+    /* Restore saved Concept */
+    let savedConcept = localStorage.getItem("selectedConcept");
 
-});
+    if(savedConcept && workbook.SheetNames.includes(savedConcept))
+        dropdown.value = savedConcept;
+
+    loadSheet(dropdown.value);
+
+}
 
 
 /* Concept change */
 document.getElementById("sheetSelect").addEventListener("change", function() {
+
+    localStorage.setItem("selectedConcept", this.value);
 
     loadSheet(this.value);
 
@@ -154,15 +163,21 @@ document.getElementById("sheetSelect").addEventListener("change", function() {
 
 
 /* Zone change */
-document.getElementById("zoneSelect").addEventListener("change", renderTable);
+document.getElementById("zoneSelect").addEventListener("change", function(){
+
+    localStorage.setItem("selectedZone", this.value);
+
+    renderTable();
+
+});
 
 
-/* DEST_ID search */
+/* DEST search */
 document.getElementById("destSearch").addEventListener("input", renderTable);
 
 
 
-/* Load selected Concept */
+/* Load selected sheet */
 function loadSheet(sheetName) {
 
     let sheet = workbook.Sheets[sheetName];
@@ -176,22 +191,20 @@ function loadSheet(sheetName) {
 }
 
 
-
 /* Populate Zone dropdown */
 function populateZoneDropdown() {
 
-    let zoneDropdown = document.getElementById("zoneSelect");
+    let dropdown = document.getElementById("zoneSelect");
 
-    zoneDropdown.innerHTML = "";
+    dropdown.innerHTML = "";
 
     /* All Zones option */
     let allOption = document.createElement("option");
 
     allOption.value = "ALL";
     allOption.text = "All Zones";
-    allOption.selected = true;
 
-    zoneDropdown.appendChild(allOption);
+    dropdown.appendChild(allOption);
 
     currentData[0].forEach((header, index) => {
 
@@ -202,14 +215,21 @@ function populateZoneDropdown() {
             option.value = index;
             option.text = header;
 
-            zoneDropdown.appendChild(option);
+            dropdown.appendChild(option);
 
         }
 
     });
 
-}
+    /* Restore saved Zone */
+    let savedZone = localStorage.getItem("selectedZone");
 
+    if(savedZone && [...dropdown.options].some(o => o.value === savedZone))
+        dropdown.value = savedZone;
+    else
+        dropdown.value = "ALL";
+
+}
 
 
 /* Render table */
@@ -241,7 +261,6 @@ function renderTable() {
 
     let html = "<table>";
 
-    /* Header */
     html += "<tr>";
 
     html += "<th>"+currentData[0][0]+"</th>";
@@ -259,8 +278,6 @@ function renderTable() {
     html += "</tr>";
 
 
-
-    /* Rows */
     for(let i=1; i<currentData.length; i++) {
 
         let row = currentData[i];
@@ -303,5 +320,4 @@ function renderTable() {
 </script>
 
 </body>
-
 </html>
